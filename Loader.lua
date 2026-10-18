@@ -5,7 +5,7 @@ if env.ScriptHub and env.ScriptHub.Unload then
 end
 
 local Options = env.ScriptHubOptions or {}
-local REPO = Options.Repo or "c38108221-alt/Hub"
+local REPO = Options.Repo or "c38108221-alt/mine"
 local BRANCH = Options.Branch or "main"
 local LOCAL = Options.LocalPath
 local BASE = ("https://raw.githubusercontent.com/%s/%s/"):format(REPO, BRANCH)
