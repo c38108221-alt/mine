@@ -784,7 +784,8 @@ return function(Hub)
                 if State.autoFlingSheriff and State.farm and not sheriffFlung then
                     task.wait(2) -- wait for roles to be distributed
                     if Hub.Alive and State.farm and State.autoFlingSheriff
-                        and findTool(LocalPlayer, "Knife") and not sheriffFlung then
+                        and not findTool(LocalPlayer, "Knife") and not findTool(LocalPlayer, "Gun")
+                        and not sheriffFlung then
                         sheriffFlung = true
                         task.spawn(function()
                             local ok, err = pcall(flingOneSheriff)
@@ -837,7 +838,7 @@ return function(Hub)
         Callback = function(v) State.grabGun = v end,
     })
     farm:Toggle({
-        Name = "Auto fling sheriff", Description = "Murderer: flings the sheriff once at round start to steal their gun early",
+        Name = "Auto fling sheriff", Description = "Innocent: flings the sheriff once at round start to steal their gun, then finish the round when the bag is full",
         Flag = "coinFarm.autoFlingSheriff", Default = State.autoFlingSheriff,
         Callback = function(v) State.autoFlingSheriff = v end,
     })
