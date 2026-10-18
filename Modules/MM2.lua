@@ -592,21 +592,29 @@ return function(Hub)
         end
         task.wait(0.05)
         if Hub.OldPos then
+            -- BodyPosition physically pulls the character back — overcomes fling momentum
+            -- that CFrame alone cannot fight (physics engine ignores CFrame under high velocity)
+            local bpReturn = Instance.new("BodyPosition")
+            bpReturn.Position = Hub.OldPos.Position + Vector3.new(0, 0.5, 0)
+            bpReturn.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            bpReturn.P = 1e7
+            bpReturn.D = 1e5
+            bpReturn.Parent = RootPart
             local t = os.clock()
             repeat
-                RootPart.CFrame = Hub.OldPos * CFrame.new(0, 0.5, 0)
-                Character:SetPrimaryPartCFrame(Hub.OldPos * CFrame.new(0, 0.5, 0))
                 Humanoid:ChangeState("GettingUp")
-                for _, part in ipairs(Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.Velocity = Vector3.zero
-                        part.RotVelocity = Vector3.zero
-                        part.AssemblyLinearVelocity = Vector3.zero
-                        part.AssemblyAngularVelocity = Vector3.zero
-                    end
-                end
                 task.wait()
-            until (RootPart.Position - Hub.OldPos.Position).Magnitude < 25 or os.clock() - t > 5
+            until (RootPart.Position - Hub.OldPos.Position).Magnitude < 20 or os.clock() - t > 5
+            bpReturn:Destroy()
+            -- zero residual velocity after BodyPosition pulled us in
+            for _, part in ipairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.AssemblyLinearVelocity = Vector3.zero
+                    part.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+            RootPart.CFrame = Hub.OldPos * CFrame.new(0, 0.5, 0)
+            Character:SetPrimaryPartCFrame(Hub.OldPos * CFrame.new(0, 0.5, 0))
         end
         workspace.FallenPartsDestroyHeight = FPDH
         if not ok then error(err) end
