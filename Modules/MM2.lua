@@ -586,7 +586,17 @@ return function(Hub)
             local h = c and c:FindFirstChildOfClass("Humanoid")
             local r = c and c:FindFirstChild("HumanoidRootPart")
             if not (sheriff.Parent and h and h.Health > 0 and r) then return end
+            -- force-save position before fling (velocity check in skidFling may skip it)
+            local myChar = LocalPlayer.Character
+            local myRoot = myChar and myChar:FindFirstChildOfClass("Humanoid") and myChar:FindFirstChildOfClass("Humanoid").RootPart
+            local preFlingPos = myRoot and myRoot.CFrame
+            Hub.OldPos = preFlingPos or Hub.OldPos
             skidFling(sheriff)
+            -- return to exact pre-fling position regardless of what skidFling did
+            if preFlingPos and myRoot and myRoot.Parent then
+                myRoot.CFrame = preFlingPos
+                myChar:SetPrimaryPartCFrame(preFlingPos)
+            end
             notify("Auto fling sheriff", "Done — grabbing gun", "good")
         end)
         workspace.FallenPartsDestroyHeight = FPDH
