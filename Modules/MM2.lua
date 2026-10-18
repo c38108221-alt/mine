@@ -342,7 +342,7 @@ return function(Hub)
                 shoot:FireServer(from, CFrame.new(mhrp.Position))
             end
 
-            task.wait(0.15)
+            task.wait(0.5) -- wait for server to register the shot before returning
             if State.sharpReturn and hrp.Parent then hrp.CFrame = origin end
         end)
         shooting = false
@@ -509,6 +509,8 @@ return function(Hub)
             local Time = tick()
             local Angle = 0
             repeat
+                -- stop following if target fell off the map (we'd die with them)
+                if BasePart.Position.Y < -50 then break end
                 if RootPart and THumanoid then
                     if BasePart.Velocity.Magnitude < 50 then
                         Angle += 100
