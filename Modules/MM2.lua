@@ -15,6 +15,7 @@ return function(Hub)
         effSpeed = 0,
         rejoinEmpty = false,
         rejoinKick = false,
+        autoFlingSheriff = false,
     }
     local blacklist = {}
 
@@ -285,6 +286,12 @@ return function(Hub)
     local function findMurderer()
         for _, pl in ipairs(Players:GetPlayers()) do
             if pl ~= LocalPlayer and findTool(pl, "Knife") then return pl end
+        end
+    end
+
+    local function findSheriff()
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= LocalPlayer and findTool(pl, "Gun") then return pl end
         end
     end
 
@@ -559,6 +566,27 @@ return function(Hub)
         if not ok then error(err) end
     end
 
+    local flingSheriffing = false
+
+    local function flingOneSheriff()
+        if flingSheriffing then return end
+        flingSheriffing = true
+        local ok, err = pcall(function()
+            local sheriff = findSheriff()
+            if not sheriff then return notify("Auto fling sheriff", "Sheriff not found", "warn") end
+            notify("Auto fling sheriff", "Flinging " .. sheriff.Name, "good")
+            local c = sheriff.Character
+            local h = c and c:FindFirstChildOfClass("Humanoid")
+            local r = c and c:FindFirstChild("HumanoidRootPart")
+            if not (sheriff.Parent and h and h.Health > 0 and r) then return end
+            skidFling(sheriff)
+            notify("Auto fling sheriff", "Done — grabbing gun", "good")
+        end)
+        workspace.FallenPartsDestroyHeight = FPDH
+        flingSheriffing = false
+        if not ok then notify("Auto fling sheriff", tostring(err), "bad") end
+    end
+
     local function flingMurderer()
         if flinging then return end
         flinging = true
@@ -741,6 +769,33 @@ return function(Hub)
         end
     end)
 
+    -- Auto fling sheriff at round start
+    local sheriffFlung = false
+    task.spawn(function()
+        local wasWaiting = true
+        while Hub.Alive do
+            task.wait(0.5)
+            local waiting = isWaiting()
+            if waiting then
+                wasWaiting = true
+                sheriffFlung = false
+            elseif wasWaiting and not waiting then
+                wasWaiting = false
+                if State.autoFlingSheriff and State.farm and not sheriffFlung then
+                    task.wait(2) -- wait for roles to be distributed
+                    if Hub.Alive and State.farm and State.autoFlingSheriff
+                        and findTool(LocalPlayer, "Knife") and not sheriffFlung then
+                        sheriffFlung = true
+                        task.spawn(function()
+                            local ok, err = pcall(flingOneSheriff)
+                            if not ok then warn("[Auto fling sheriff] " .. tostring(err)) end
+                        end)
+                    end
+                end
+            end
+        end
+    end)
+
     local tab = Hub.Window:AddTab({ Name = "MM2", Icon = "knife" })
 
     local farm = tab:AddSection("Autofarm")
@@ -780,6 +835,11 @@ return function(Hub)
         Name = "Auto grab gun", Description = "Picks up the gun dropped after the sheriff dies",
         Flag = "grabGun.enabled", Default = State.grabGun,
         Callback = function(v) State.grabGun = v end,
+    })
+    farm:Toggle({
+        Name = "Auto fling sheriff", Description = "Murderer: flings the sheriff once at round start to steal their gun early",
+        Flag = "coinFarm.autoFlingSheriff", Default = State.autoFlingSheriff,
+        Callback = function(v) State.autoFlingSheriff = v end,
     })
 
     task.spawn(function()
