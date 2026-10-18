@@ -552,6 +552,14 @@ return function(Hub)
 
         task.wait(0.2) -- let fling velocity register before returning
         if Hub.OldPos then
+            -- zero ALL velocity BEFORE teleporting so server accepts the new position
+            for _, part in ipairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.AssemblyLinearVelocity = Vector3.zero
+                    part.AssemblyAngularVelocity = Vector3.zero
+                end
+            end
+            task.wait() -- one frame for physics to register zero velocity
             local t = os.clock()
             repeat
                 RootPart.CFrame = Hub.OldPos * CFrame.new(0, 0.5, 0)
@@ -559,7 +567,8 @@ return function(Hub)
                 Humanoid:ChangeState("GettingUp")
                 for _, part in ipairs(Character:GetChildren()) do
                     if part:IsA("BasePart") then
-                        part.Velocity, part.RotVelocity = Vector3.new(), Vector3.new()
+                        part.AssemblyLinearVelocity = Vector3.zero
+                        part.AssemblyAngularVelocity = Vector3.zero
                     end
                 end
                 task.wait()
@@ -577,10 +586,15 @@ return function(Hub)
             local sheriff
             local deadline = os.clock() + 15
             while not sheriff and os.clock() < deadline and Hub.Alive do
+                -- abort if we turned out to be murderer or sheriff during the wait
+                if findTool(LocalPlayer, "Knife") or findTool(LocalPlayer, "Gun") then return end
                 sheriff = findSheriff()
                 if not sheriff then task.wait(0.5) end
             end
             if not sheriff then return notify("Auto fling sheriff", "Sheriff not found", "warn") end
+            -- final role check before fling
+            if findTool(LocalPlayer, "Knife") then return end -- we are murderer
+            if findTool(LocalPlayer, "Gun") then return end   -- we are sheriff
             notify("Auto fling sheriff", "Flinging " .. sheriff.Name, "good")
             local c = sheriff.Character
             local h = c and c:FindFirstChildOfClass("Humanoid")
