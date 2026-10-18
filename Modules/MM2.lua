@@ -575,7 +575,7 @@ return function(Hub)
         local ok, err = pcall(function()
             -- poll until sheriff appears (roles may not be assigned yet)
             local sheriff
-            local deadline = os.clock() + 8
+            local deadline = os.clock() + 15
             while not sheriff and os.clock() < deadline and Hub.Alive do
                 sheriff = findSheriff()
                 if not sheriff then task.wait(0.5) end
