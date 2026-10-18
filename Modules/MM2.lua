@@ -27,10 +27,12 @@ return function(Hub)
         return w ~= nil and w.Visible == true
     end
 
+    local flingSheriffing = false -- declared here so canFarm() can reference it
+
     local function canFarm()
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        return hum ~= nil and hum.Health > 0 and not isWaiting()
+        return hum ~= nil and hum.Health > 0 and not isWaiting() and not flingSheriffing
     end
 
     local function getContainer()
@@ -566,8 +568,6 @@ return function(Hub)
         workspace.FallenPartsDestroyHeight = FPDH
         if not ok then error(err) end
     end
-
-    local flingSheriffing = false
 
     local function flingOneSheriff()
         if flingSheriffing then return end
