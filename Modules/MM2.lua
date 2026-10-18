@@ -639,20 +639,29 @@ return function(Hub)
             local myRoot = myChar and myChar:FindFirstChildOfClass("Humanoid") and myChar:FindFirstChildOfClass("Humanoid").RootPart
             local preFlingPos = myRoot and myRoot.CFrame
             Hub.OldPos = preFlingPos or Hub.OldPos
-            skidFling(sheriff, true) -- oneShot: single fling burst
-            -- zero all velocities so server doesn't reject the teleport
-            if myChar then
-                for _, part in ipairs(myChar:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.Velocity = Vector3.zero
-                        part.RotVelocity = Vector3.zero
+            skidFling(sheriff, true)
+            -- retry loop: zero velocity + force-teleport every 0.1s until actually on map
+            local returnDeadline = os.clock() + 8
+            while preFlingPos and os.clock() < returnDeadline and Hub.Alive do
+                myChar = LocalPlayer.Character
+                myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if myRoot and myRoot.Parent then
+                    if (myRoot.Position - preFlingPos.Position).Magnitude < 200 then
+                        break -- close enough: server accepted the teleport
                     end
+                    -- still floating away: kill all velocity and retry
+                    for _, part in ipairs(myChar:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.Velocity = Vector3.zero
+                            part.RotVelocity = Vector3.zero
+                            part.AssemblyLinearVelocity = Vector3.zero
+                            part.AssemblyAngularVelocity = Vector3.zero
+                        end
+                    end
+                    myRoot.CFrame = preFlingPos
+                    myChar:SetPrimaryPartCFrame(preFlingPos)
                 end
-            end
-            -- return to exact pre-fling position
-            if preFlingPos and myRoot and myRoot.Parent then
-                myRoot.CFrame = preFlingPos
-                myChar:SetPrimaryPartCFrame(preFlingPos)
+                task.wait(0.1)
             end
             notify("Auto fling sheriff", "Done — grabbing gun", "good")
         end)
