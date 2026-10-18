@@ -548,6 +548,7 @@ return function(Hub)
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
         camera.CameraSubject = Humanoid
 
+        task.wait(0.2) -- let fling velocity register before returning
         if Hub.OldPos then
             local t = os.clock()
             repeat
