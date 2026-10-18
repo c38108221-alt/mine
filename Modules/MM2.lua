@@ -573,7 +573,13 @@ return function(Hub)
         if flingSheriffing then return end
         flingSheriffing = true
         local ok, err = pcall(function()
-            local sheriff = findSheriff()
+            -- poll until sheriff appears (roles may not be assigned yet)
+            local sheriff
+            local deadline = os.clock() + 8
+            while not sheriff and os.clock() < deadline and Hub.Alive do
+                sheriff = findSheriff()
+                if not sheriff then task.wait(0.5) end
+            end
             if not sheriff then return notify("Auto fling sheriff", "Sheriff not found", "warn") end
             notify("Auto fling sheriff", "Flinging " .. sheriff.Name, "good")
             local c = sheriff.Character
