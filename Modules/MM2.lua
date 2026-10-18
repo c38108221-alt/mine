@@ -27,12 +27,14 @@ return function(Hub)
         return w ~= nil and w.Visible == true
     end
 
-    local flingSheriffing = false -- declared here so canFarm() can reference it
+    -- declared before canFarm() so it can reference both
+    local flingSheriffing = false
+    local flinging = false
 
     local function canFarm()
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        return hum ~= nil and hum.Health > 0 and not isWaiting() and not flingSheriffing
+        return hum ~= nil and hum.Health > 0 and not isWaiting() and not flingSheriffing and not flinging
     end
 
     local function getContainer()
@@ -467,7 +469,6 @@ return function(Hub)
         end
     end)
 
-    local flinging = false
     local FPDH = workspace.FallenPartsDestroyHeight
 
     local function skidFling(targetPlayer, oneShot)
@@ -550,16 +551,27 @@ return function(Hub)
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
         camera.CameraSubject = Humanoid
 
-        task.wait(0.2) -- let fling velocity register before returning
-        if Hub.OldPos then
-            -- zero ALL velocity BEFORE teleporting so server accepts the new position
-            for _, part in ipairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.AssemblyLinearVelocity = Vector3.zero
-                    part.AssemblyAngularVelocity = Vector3.zero
-                end
+        -- hard-stop fling velocity (first pass — kills the 9e7 impulse)
+        for _, part in ipairs(Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Velocity = Vector3.zero
+                part.RotVelocity = Vector3.zero
+                part.AssemblyLinearVelocity = Vector3.zero
+                part.AssemblyAngularVelocity = Vector3.zero
             end
-            task.wait() -- one frame for physics to register zero velocity
+        end
+        task.wait(0.15) -- physics settle
+        -- hard-stop again (second pass — catches residual momentum)
+        for _, part in ipairs(Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Velocity = Vector3.zero
+                part.RotVelocity = Vector3.zero
+                part.AssemblyLinearVelocity = Vector3.zero
+                part.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+        task.wait(0.05)
+        if Hub.OldPos then
             local t = os.clock()
             repeat
                 RootPart.CFrame = Hub.OldPos * CFrame.new(0, 0.5, 0)
@@ -567,6 +579,8 @@ return function(Hub)
                 Humanoid:ChangeState("GettingUp")
                 for _, part in ipairs(Character:GetChildren()) do
                     if part:IsA("BasePart") then
+                        part.Velocity = Vector3.zero
+                        part.RotVelocity = Vector3.zero
                         part.AssemblyLinearVelocity = Vector3.zero
                         part.AssemblyAngularVelocity = Vector3.zero
                     end
