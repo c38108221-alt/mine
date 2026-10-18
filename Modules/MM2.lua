@@ -708,7 +708,7 @@ return function(Hub)
         local game_ = main and main:FindFirstChild("Game")
         local bags = game_ and game_:FindFirstChild("CoinBags")
         local cont = bags and bags:FindFirstChild("Container")
-        return cont and cont:FindFirstChild("Coin")
+        return cont and cont:FindFirstChild("Candy")
     end
 
     local function digitsOnly(text)
