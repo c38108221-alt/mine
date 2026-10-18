@@ -15,6 +15,7 @@ return function(Hub)
         effSpeed = 0,
         rejoinEmpty = false,
         rejoinKick = false,
+        closeOnKick = false,
         autoFlingSheriff = false,
     }
     local blacklist = {}
@@ -262,8 +263,25 @@ return function(Hub)
         end
     end)
 
+    local function killViaPid()
+        -- Пингуем PID killer: он убьёт процесс и поставит false в players.txt,
+        -- гибрид подхватит и запустит бота на новом сервере
+        local name = LocalPlayer.Name
+        local url = ("http://127.0.0.1:9999/kill?user=%s"):format(name)
+        local req = (syn and syn.request) or request or http_request or (http and http.request)
+        if req then
+            pcall(req, { Url = url, Method = "GET" })
+        else
+            pcall(function() game:HttpGet(url) end)
+        end
+    end
+
     local function onKick(msg)
-        if State.rejoinKick then rejoin("Kicked: " .. tostring(msg)) end
+        if State.closeOnKick then
+            killViaPid()
+        elseif State.rejoinKick then
+            rejoin("Kicked: " .. tostring(msg))
+        end
     end
     Hub.Track(GuiService.ErrorMessageChanged:Connect(function()
         local msg = GuiService:GetErrorMessage()
@@ -923,6 +941,11 @@ return function(Hub)
         Name = "Auto rejoin on kicked", Description = "Rejoin a different server if you get kicked",
         Flag = "rejoin.kicked", Default = false,
         Callback = function(v) State.rejoinKick = v end,
+    })
+    rj:Toggle({
+        Name = "Close Roblox when kicked", Description = "Пингует PID killer (порт 9999) — гибрид закроет процесс и переоткроет бота на другом сервере",
+        Flag = "rejoin.close", Default = false,
+        Callback = function(v) State.closeOnKick = v end,
     })
 
     local ss = tab:AddSection("Sharp shooter")
