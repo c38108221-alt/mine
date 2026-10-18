@@ -502,7 +502,7 @@ return function(Hub)
         end
 
         local function SFBasePart(BasePart)
-            local TimeToWait = oneShot and 0 or 2
+            local TimeToWait = 2
             local Time = tick()
             local Angle = 0
             repeat
@@ -525,7 +525,6 @@ return function(Hub)
                         FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0)) task.wait()
                         FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0)) task.wait()
                     end
-                    if oneShot then break end -- single burst for sheriff fling
                 end
             until Time + TimeToWait < tick() or not Hub.Alive
         end
