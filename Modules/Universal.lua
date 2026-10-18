@@ -237,6 +237,7 @@ return function(Hub)
     end
 
     local ROW_H, ROW_GAP, HEAD_H, WIDTH = 46, 4, 34, 390
+    local MAX_ROWS_VISIBLE = 8 -- max visible rows before scroll kicks in
 
     local altsFrame = new("Frame", {
         Name = "AltsList",
@@ -279,10 +280,15 @@ return function(Hub)
         TextXAlignment = Enum.TextXAlignment.Right,
     }, head)
 
-    local rowsFrame = new("Frame", {
+    local rowsFrame = new("ScrollingFrame", {
         Size = UDim2.new(1, -12, 1, -HEAD_H - 4),
         Position = UDim2.fromOffset(6, HEAD_H),
         BackgroundTransparency = 1,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.Sub,
+        BorderSizePixel = 0,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
     }, altsFrame)
     UI.List(rowsFrame, ROW_GAP)
 
@@ -383,7 +389,9 @@ return function(Hub)
         end
 
         headInfo.Text = ("%d live · %d total"):format(live, #data)
-        altsFrame.Size = UDim2.fromOffset(WIDTH, HEAD_H + 8 + #data * (ROW_H + ROW_GAP))
+        local visRows = math.min(#data, MAX_ROWS_VISIBLE)
+        local rowsH = visRows > 0 and (visRows * ROW_H + math.max(0, visRows - 1) * ROW_GAP) or 0
+        altsFrame.Size = UDim2.fromOffset(WIDTH, HEAD_H + 8 + rowsH)
     end
 
     local tab = Hub.Window:AddTab({ Name = "Universal", Icon = "globe" })

@@ -468,7 +468,7 @@ return function(Hub)
     local flinging = false
     local FPDH = workspace.FallenPartsDestroyHeight
 
-    local function skidFling(targetPlayer)
+    local function skidFling(targetPlayer, oneShot)
         local Character = LocalPlayer.Character
         local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
         local RootPart = Humanoid and Humanoid.RootPart
@@ -502,7 +502,7 @@ return function(Hub)
         end
 
         local function SFBasePart(BasePart)
-            local TimeToWait = 2
+            local TimeToWait = oneShot and 0 or 2
             local Time = tick()
             local Angle = 0
             repeat
@@ -525,6 +525,7 @@ return function(Hub)
                         FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(math.rad(90), 0, 0)) task.wait()
                         FPos(BasePart, CFrame.new(0, -1.5, 0), CFrame.Angles(0, 0, 0)) task.wait()
                     end
+                    if oneShot then break end -- single burst for sheriff fling
                 end
             until Time + TimeToWait < tick() or not Hub.Alive
         end
@@ -591,8 +592,17 @@ return function(Hub)
             local myRoot = myChar and myChar:FindFirstChildOfClass("Humanoid") and myChar:FindFirstChildOfClass("Humanoid").RootPart
             local preFlingPos = myRoot and myRoot.CFrame
             Hub.OldPos = preFlingPos or Hub.OldPos
-            skidFling(sheriff)
-            -- return to exact pre-fling position regardless of what skidFling did
+            skidFling(sheriff, true) -- oneShot: single fling burst
+            -- zero all velocities so server doesn't reject the teleport
+            if myChar then
+                for _, part in ipairs(myChar:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Velocity = Vector3.zero
+                        part.RotVelocity = Vector3.zero
+                    end
+                end
+            end
+            -- return to exact pre-fling position
             if preFlingPos and myRoot and myRoot.Parent then
                 myRoot.CFrame = preFlingPos
                 myChar:SetPrimaryPartCFrame(preFlingPos)
