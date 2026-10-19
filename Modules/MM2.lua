@@ -16,6 +16,7 @@ return function(Hub)
         rejoinEmpty = false,
         rejoinKick = false,
         closeOnKick = false,
+        lowCphKick = false,
         autoFlingSheriff = false,
     }
     local blacklist = {}
@@ -934,12 +935,24 @@ return function(Hub)
         Callback = function(v) State.autoFlingSheriff = v end,
     })
 
+    local lowCphTriggered = false
+
     task.spawn(function()
         while Hub.Alive do
             local st = Hub.Tracker.Stats()
             local rate = st.elapsed >= 60 and Hub.UI.Format(st.cph) or "..."
             local spd = State.farm and State.effSpeed > 0 and (" · " .. math.floor(State.effSpeed + 0.5) .. " st/s") or ""
             statsLabel:Set(("Coins: %s · %s coins/hour%s"):format(Hub.UI.Format(farmedTotal), rate, spd))
+
+            -- self-kick if earnings are too low after 20 min of farming
+            if State.lowCphKick and State.farm and not lowCphTriggered
+                and st.elapsed >= 1200 and st.cph < 600 then
+                lowCphTriggered = true
+                notify("Auto rejoin", ("Low earnings (%d/hr) — self-kicking"):format(st.cph), "warn")
+                task.wait(2)
+                killViaPid()
+            end
+
             task.wait(1)
         end
     end)
@@ -963,6 +976,14 @@ return function(Hub)
         Name = "Close Roblox when kicked", Description = "Пингует PID killer (порт 9999) — гибрид закроет процесс и переоткроет бота на другом сервере",
         Flag = "rejoin.close", Default = false,
         Callback = function(v) State.closeOnKick = v end,
+    })
+    rj:Toggle({
+        Name = "Self-kick on low earnings", Description = "После 20 минут фарма: если < 600 монет/час, пингует PID killer (порт 9999) и уходит на другой сервер",
+        Flag = "rejoin.lowCph", Default = false,
+        Callback = function(v)
+            State.lowCphKick = v
+            if v then lowCphTriggered = false end -- reset on re-enable so it can trigger again
+        end,
     })
 
     local ss = tab:AddSection("Sharp shooter")
