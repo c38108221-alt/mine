@@ -122,16 +122,25 @@ return function(Hub)
     end
 
     local holdConn, holdCF = nil, nil
+    local prevHoldPos = nil -- used to compute physics-consistent velocity
 
     local function startHold()
         if holdConn then return end
-        holdConn = RunService.Heartbeat:Connect(function()
+        prevHoldPos = nil
+        holdConn = RunService.Heartbeat:Connect(function(dt)
             local char = LocalPlayer.Character
             local h = char and char:FindFirstChild("HumanoidRootPart")
             if h and holdCF and State.farm and canFarm() then
+                local newPos = holdCF.Position
+                -- set velocity matching actual movement so server sees consistent physics
+                if prevHoldPos and dt > 0 then
+                    h.AssemblyLinearVelocity = (newPos - prevHoldPos) / dt
+                end
+                prevHoldPos = newPos
                 h.CFrame = holdCF
-                h.AssemblyLinearVelocity = Vector3.zero
                 h.AssemblyAngularVelocity = Vector3.zero
+            else
+                prevHoldPos = nil
             end
         end)
     end
@@ -142,6 +151,7 @@ return function(Hub)
             holdConn = nil
         end
         holdCF = nil
+        prevHoldPos = nil
     end
 
     local function flyTo(hrp, cf, duration, coin)
