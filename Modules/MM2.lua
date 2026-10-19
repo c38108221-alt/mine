@@ -956,7 +956,7 @@ return function(Hub)
 
             -- self-kick if earnings are too low after 20 min of farming
             if State.lowCphKick and State.farm and not lowCphTriggered
-                and st.elapsed >= 1200 and st.cph < 600 then
+                and st.elapsed >= 1200 and st.cph < 650 then
                 lowCphTriggered = true
                 notify("Auto rejoin", ("Low earnings (%d/hr) — self-kicking"):format(st.cph), "warn")
                 task.wait(2)
@@ -988,7 +988,7 @@ return function(Hub)
         Callback = function(v) State.closeOnKick = v end,
     })
     rj:Toggle({
-        Name = "Self-kick on low earnings", Description = "После 20 минут фарма: если < 600 монет/час, пингует PID killer (порт 9999) и уходит на другой сервер",
+        Name = "Self-kick on low earnings", Description = "После 20 минут фарма: если < 650 монет/час, пингует PID killer (порт 9999) и уходит на другой сервер",
         Flag = "rejoin.lowCph", Default = false,
         Callback = function(v)
             State.lowCphKick = v
