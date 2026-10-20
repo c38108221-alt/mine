@@ -117,6 +117,12 @@ return function(Hub)
     end)
     Hub.RegisterFlag("ui.accent", function() return UI.AccentName end, function(v) UI.SetAccent(v) end)
 
+    ui:Toggle({
+        Name = "Performance mode",
+        Description = "Скрывает эффекты (glow, shadow, градиенты) — снижает нагрузку на GPU и VRAM. Рекомендуется при ночном фарме",
+        Flag = "ui.perfMode", Default = false,
+        Callback = UI.SetPerfMode,
+    })
     local transparency = ui:Slider({
         Name = "UI transparency", Flag = "ui.transparency",
         Min = 0, Max = 60, Default = 0, Suffix = "%",

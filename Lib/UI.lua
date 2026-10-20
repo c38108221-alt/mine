@@ -96,7 +96,15 @@ return function(Hub)
         return g
     end
 
+    local perfMode = false
+    local halos    = {}   -- weak refs so GC can clean destroyed instances
+
     local function tween(o, props, t, style, dir)
+        if perfMode then
+            -- skip animation, apply instantly
+            for k, v in pairs(props) do pcall(function() o[k] = v end) end
+            return
+        end
         local tw = TweenService:Create(o, TweenInfo.new(t or 0.15,
             style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
         tw:Play()
@@ -205,13 +213,32 @@ return function(Hub)
             Size = UDim2.new(1, pad * 2, 1, pad * 2),
             ImageTransparency = opts.Transparency or 0.6,
             ZIndex = opts.ZIndex or 0,
+            Visible = not perfMode,
         })
         if opts.Color then
             img.ImageColor3 = opts.Color
         else
             UI.BindAccent(function() img.ImageColor3 = Theme.Accent end)
         end
+        halos[#halos + 1] = img
         return img
+    end
+
+    function UI.SetPerfMode(on)
+        perfMode = on
+        -- hide/show all glow, shadow, radial, dots sprites
+        for i = #halos, 1, -1 do
+            local h = halos[i]
+            if h and h.Parent then
+                h.Visible = not on
+            else
+                table.remove(halos, i)   -- clean up destroyed instances
+            end
+        end
+        -- stop rainbow loop immediately when perf mode is on
+        if on and UI.AccentName == "Rainbow" then
+            UI.SetAccent("Indigo")
+        end
     end
 
     function UI.Format(n)

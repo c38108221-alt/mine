@@ -93,28 +93,45 @@ return function(Hub)
         return best, bestPos
     end
 
-    local noclipConn = nil
+    local noclipConn      = nil
+    local noclipDescConn  = nil   -- watches for new accessories/tools being added
+    local noclipParts     = {}    -- cached list of BaseParts — rebuilt on char change
     local originalCollide = {}
+
+    local function buildNoclipCache(char)
+        noclipParts = {}
+        if not char then return end
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then noclipParts[#noclipParts + 1] = p end
+        end
+        -- keep cache fresh when accessories/tools are added mid-round
+        char.DescendantAdded:Connect(function(p)
+            if p:IsA("BasePart") then noclipParts[#noclipParts + 1] = p end
+        end)
+    end
 
     local function enableNoclip()
         if noclipConn then return end
+        buildNoclipCache(LocalPlayer.Character)
+        noclipDescConn = LocalPlayer.CharacterAdded:Connect(buildNoclipCache)
         noclipConn = RunService.Stepped:Connect(function()
-            local char = LocalPlayer.Character
-            if not char then return end
-            for _, p in ipairs(char:GetDescendants()) do
-                if p:IsA("BasePart") then
+            -- iterate cached list — no GetDescendants() call every frame
+            for i = #noclipParts, 1, -1 do
+                local p = noclipParts[i]
+                if p and p.Parent then
                     if originalCollide[p] == nil then originalCollide[p] = p.CanCollide end
                     p.CanCollide = false
+                else
+                    table.remove(noclipParts, i)   -- prune stale refs
                 end
             end
         end)
     end
 
     local function disableNoclip()
-        if noclipConn then
-            noclipConn:Disconnect()
-            noclipConn = nil
-        end
+        if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+        if noclipDescConn then noclipDescConn:Disconnect(); noclipDescConn = nil end
+        noclipParts = {}
         for part, state in pairs(originalCollide) do
             if part and part.Parent then part.CanCollide = state end
         end
