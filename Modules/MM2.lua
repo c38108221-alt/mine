@@ -191,9 +191,15 @@ return function(Hub)
         return eff
     end
 
+    -- independent CPH tracker (doesn't rely on Hub.Tracker internals)
+    local cphClock = os.clock()
+    local cphBase  = 0
+
     local function setFarm(on)
         State.farm = on
         if on then
+            cphClock = os.clock()   -- reset CPH timer on every farm-start
+            cphBase  = farmedTotal
             enableNoclip()
         else
             stopHold()
@@ -949,20 +955,39 @@ return function(Hub)
 
     task.spawn(function()
         while Hub.Alive do
-            local st = Hub.Tracker.Stats()
-            local rate = st.elapsed >= 60 and Hub.UI.Format(st.cph) or "..."
-            local spd = State.farm and State.effSpeed > 0 and (" · " .. math.floor(State.effSpeed + 0.5) .. " st/s") or ""
-            statsLabel:Set(("Coins: %s · %s coins/hour%s"):format(Hub.UI.Format(farmedTotal), rate, spd))
+            local ok, err = pcall(function()
+                local elapsed = os.clock() - cphClock
+                local earned  = farmedTotal - cphBase
+                local localCph = elapsed >= 60
+                    and math.floor(earned / (elapsed / 3600))
+                    or nil
+                local cphStr = localCph and Hub.UI.Format(localCph) or "..."
+                local spd = State.farm and State.effSpeed > 0
+                    and (" · " .. math.floor(State.effSpeed + 0.5) .. " st/s") or ""
+                statsLabel:Set(("Coins: %s · %s/hr%s"):format(
+                    Hub.UI.Format(farmedTotal), cphStr, spd))
 
-            -- self-kick if earnings are too low after 20 min of farming
-            if State.lowCphKick and State.farm and not lowCphTriggered
-                and st.elapsed >= 1200 and st.cph < 650 then
-                lowCphTriggered = true
-                notify("Auto rejoin", ("Low earnings (%d/hr) — self-kicking"):format(st.cph), "warn")
-                task.wait(2)
-                killViaPid()
+                -- self-kick if earnings are too low after 20 min of farming
+                if State.lowCphKick and State.farm and not lowCphTriggered
+                    and elapsed >= 1200 and localCph and localCph < 650 then
+                    lowCphTriggered = true
+                    notify("Auto rejoin",
+                        ("Low earnings (%d/hr) — self-kicking"):format(localCph), "warn")
+                    task.wait(2)
+                    killViaPid()
+                    -- fallback: if still alive 6s later, kick ourselves directly
+                    task.wait(6)
+                    if Hub.Alive then
+                        pcall(function()
+                            game:GetService("Players").LocalPlayer:Kick(
+                                "low earnings (" .. tostring(localCph) .. "/hr)")
+                        end)
+                    end
+                end
+            end)
+            if not ok then
+                warn("[MM2] stats loop error: " .. tostring(err))
             end
-
             task.wait(1)
         end
     end)
