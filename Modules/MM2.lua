@@ -209,14 +209,16 @@ return function(Hub)
     end
 
     -- independent CPH tracker (doesn't rely on Hub.Tracker internals)
-    local cphClock = os.clock()
-    local cphBase  = 0
+    -- NOTE: cphClock/cphBase/cphNeedsReset declared here; farmedTotal is declared
+    -- later so setFarm can't read it directly — stats loop resets via cphNeedsReset flag
+    local cphClock       = os.clock()
+    local cphBase        = 0
+    local cphNeedsReset  = false
 
     local function setFarm(on)
         State.farm = on
         if on then
-            cphClock = os.clock()   -- reset CPH timer on every farm-start
-            cphBase  = farmedTotal
+            cphNeedsReset = true    -- stats loop will snapshot farmedTotal on next tick
             enableNoclip()
         else
             stopHold()
@@ -973,6 +975,12 @@ return function(Hub)
     task.spawn(function()
         while Hub.Alive do
             local ok, err = pcall(function()
+                -- snapshot farmedTotal here where it is in scope
+                if cphNeedsReset then
+                    cphClock      = os.clock()
+                    cphBase       = farmedTotal
+                    cphNeedsReset = false
+                end
                 local elapsed = os.clock() - cphClock
                 local earned  = farmedTotal - cphBase
                 local localCph = elapsed >= 60

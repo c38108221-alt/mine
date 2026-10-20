@@ -103,7 +103,8 @@ return function(Hub)
         if perfMode then
             -- skip animation, apply instantly
             for k, v in pairs(props) do pcall(function() o[k] = v end) end
-            return
+            -- return dummy tween so callers doing tw.Completed:Wait() don't crash
+            return { Completed = { Wait = function() end } }
         end
         local tw = TweenService:Create(o, TweenInfo.new(t or 0.15,
             style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
